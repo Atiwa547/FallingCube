@@ -48,7 +48,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
         self.best_player = "None"
         self.score = 0
         self.player_name = "Player1"
-        self.isPaused = False
+        self.isPaused = False  
 
         if os.path.exists(SCORE_FILE):
             try:
@@ -117,7 +117,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
         self.canvas_pixmap.fill(QtGui.QColor("#333"))
 
         btnLayout = QtWidgets.QHBoxLayout()
-        self.startButton = QtWidgets.QPushButton("START/CONTINUE")
+        self.startButton = QtWidgets.QPushButton("START/RESUME")
         self.pauseButton = QtWidgets.QPushButton("PAUSE")
         self.newButton = QtWidgets.QPushButton("NEW GAME")
         btnLayout.addWidget(self.startButton)
@@ -224,7 +224,16 @@ class FallingCubeDialog(QtWidgets.QDialog):
             else:
                 if (self.player_x < x + 20 and self.player_x + 40 > x and
                     self.player_y < y + 20 and self.player_y + 20 > y):
-                    self.pauseGame()
+                    self.pauseGame() 
+                    if self.score > self.best_score:
+                        self.best_score = self.score
+                        self.best_player = self.player_name
+                        self.bestScoreValue.setText(f"{self.best_player} : {self.best_score}")
+                        try:
+                            with open(SCORE_FILE, "w") as f:
+                                f.write(f"{self.best_player},{self.best_score}")
+                        except:
+                            pass
                     return
                 new_cubes.append([x, y])
         self.cubes = new_cubes
