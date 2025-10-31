@@ -21,7 +21,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('AmaZing FallingCube')
-        self.resize(480, 600)
+        self.resize(480, 620)
 
         self.setStyleSheet("""
             QDialog { background-color: #E3C4BD; font-family: 'Segoe UI'; font-size: 12pt; }
@@ -48,6 +48,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
         self.best_player = "None"
         self.score = 0
         self.player_name = "Player1"
+        self.isPaused = False
 
         if os.path.exists(SCORE_FILE):
             try:
@@ -116,10 +117,12 @@ class FallingCubeDialog(QtWidgets.QDialog):
         self.canvas_pixmap.fill(QtGui.QColor("#333"))
 
         btnLayout = QtWidgets.QHBoxLayout()
-        self.startButton = QtWidgets.QPushButton("START GAME")
-        self.stopButton = QtWidgets.QPushButton("STOP GAME")
+        self.startButton = QtWidgets.QPushButton("START/RESUME")
+        self.pauseButton = QtWidgets.QPushButton("PAUSE")
+        self.newButton = QtWidgets.QPushButton("NEW GAME")
         btnLayout.addWidget(self.startButton)
-        btnLayout.addWidget(self.stopButton)
+        btnLayout.addWidget(self.pauseButton)
+        btnLayout.addWidget(self.newButton)
         self.mainLayout.addLayout(btnLayout)
 
         controlFrame = QtWidgets.QFrame()
@@ -154,7 +157,8 @@ class FallingCubeDialog(QtWidgets.QDialog):
         self.mainLayout.addStretch()
 
         self.startButton.clicked.connect(self.startGame)
-        self.stopButton.clicked.connect(self.stopGame)
+        self.pauseButton.clicked.connect(self.pauseGame)
+        self.newButton.clicked.connect(self.newGame)
         self.leftBtn.clicked.connect(lambda: self.movePlayer(-20))
         self.rightBtn.clicked.connect(lambda: self.movePlayer(20))
         self.timer.timeout.connect(self.safeUpdateGame)
@@ -162,31 +166,38 @@ class FallingCubeDialog(QtWidgets.QDialog):
         self.updateCanvas()
 
     def startGame(self):
-        self.score = 0
-        self.currentScoreLabel.setText(f"Your Score: {self.score}")
-        self.cubes = []
-        self.player_name = self.playerInput.text()
+        if not self.isPaused:
+            self.score = 0
+            self.cubes = []
+            self.player_name = self.playerInput.text()
+            self.currentScoreLabel.setText(f"Your Score: {self.score}")
         self.timer.start()
         self.startButton.setEnabled(False)
-        self.stopButton.setEnabled(True)
+        self.pauseButton.setEnabled(True)
         self.spawnSlider.setEnabled(False)
         self.speedSlider.setEnabled(False)
+        self.isPaused = False
 
-    def stopGame(self):
+    def pauseGame(self):
         self.timer.stop()
         self.startButton.setEnabled(True)
-        self.stopButton.setEnabled(False)
+        self.pauseButton.setEnabled(False)
         self.spawnSlider.setEnabled(True)
         self.speedSlider.setEnabled(True)
-        if self.score > self.best_score:
-            self.best_score = self.score
-            self.best_player = self.player_name
-            self.bestScoreValue.setText(f"{self.best_player} : {self.best_score}")
-            try:
-                with open(SCORE_FILE, "w") as f:
-                    f.write(f"{self.best_player},{self.best_score}")
-            except:
-                pass
+        self.isPaused = True
+
+    def newGame(self):
+        self.timer.stop()
+        self.cubes = []
+        self.score = 0
+        self.player_name = self.playerInput.text()
+        self.currentScoreLabel.setText(f"Your Score: {self.score}")
+        self.startButton.setEnabled(True)
+        self.pauseButton.setEnabled(True)
+        self.spawnSlider.setEnabled(True)
+        self.speedSlider.setEnabled(True)
+        self.isPaused = False
+        self.updateCanvas()
 
     def movePlayer(self, dx):
         self.player_x = max(0, min(440 - 40, self.player_x + dx))
@@ -197,7 +208,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
             self.updateGame()
         except Exception as e:
             print("Error in updateGame:", e)
-            self.stopGame()
+            self.pauseGame()
 
     def updateGame(self):
         if len(self.cubes) < self.spawnSlider.value():
@@ -213,7 +224,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
             else:
                 if (self.player_x < x + 20 and self.player_x + 40 > x and
                     self.player_y < y + 20 and self.player_y + 20 > y):
-                    self.stopGame()
+                    self.pauseGame()
                     return
                 new_cubes.append([x, y])
         self.cubes = new_cubes
@@ -241,8 +252,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
 
         painter.setBrush(QtGui.QColor("#ff8844"))
         painter.drawRect(self.player_x, self.player_y, 40, 20)
-
-        painter.setPen(QtGui.QColor("#FFA500"))
+        painter.setPen(QtGui.QColor("#FF8C00"))  # 🔹 ชื่อผู้เล่นสีส้ม
         painter.setFont(QtGui.QFont("Segoe UI", 10, QtGui.QFont.Bold))
         painter.drawText(self.player_x, self.player_y - 5, self.player_name)
 
