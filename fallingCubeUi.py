@@ -117,7 +117,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
         self.canvas_pixmap.fill(QtGui.QColor("#333"))
 
         btnLayout = QtWidgets.QHBoxLayout()
-        self.startButton = QtWidgets.QPushButton("START/RESUME")
+        self.startButton = QtWidgets.QPushButton("START/CONTINUE")
         self.pauseButton = QtWidgets.QPushButton("PAUSE")
         self.newButton = QtWidgets.QPushButton("NEW GAME")
         btnLayout.addWidget(self.startButton)
