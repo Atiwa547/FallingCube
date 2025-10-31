@@ -261,7 +261,7 @@ class FallingCubeDialog(QtWidgets.QDialog):
 
         painter.setBrush(QtGui.QColor("#ff8844"))
         painter.drawRect(self.player_x, self.player_y, 40, 20)
-        painter.setPen(QtGui.QColor("#FF8C00"))  # 🔹 ชื่อผู้เล่นสีส้ม
+        painter.setPen(QtGui.QColor("#FF8C00"))
         painter.setFont(QtGui.QFont("Segoe UI", 10, QtGui.QFont.Bold))
         painter.drawText(self.player_x, self.player_y - 5, self.player_name)
 
