@@ -2,128 +2,252 @@ try:
     from PySide2 import QtCore, QtGui, QtWidgets
     from shiboken2 import wrapInstance
 except:
-    from PySide2 import QtCore, QtGui, QtWidgets
-    from shiboken2 import wrapInstance
+    from PySide6 import QtCore, QtGui, QtWidgets
+    from shiboken6 import wrapInstance
+
 import maya.OpenMayaUI as omui
+import os, random
+
+IMAGE_DIR = r"C:\Users\pimfi\OneDrive\เอกสาร\maya\2024\scripts\fallingCube\pic"
+SCORE_FILE = os.path.join(IMAGE_DIR, "fallingcube_score.txt")
+
+
+def getMayaMainWindow():
+    ptr = omui.MQtUtil.mainWindow()
+    return wrapInstance(int(ptr), QtWidgets.QWidget)
 
 
 class FallingCubeDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-
         self.setWindowTitle('AmaZing FallingCube')
-        self.resize(500, 500)
-
-        self.mainLayout = QtWidgets.QVBoxLayout()
-        self.setLayout(self.mainLayout)
+        self.resize(480, 600)
 
         self.setStyleSheet("""
-            QDialog {
-                background-color: #F9E1D9;
-            }
-            QLabel {
-                color: #4A1A14;
-                font-size: 14px;
-                font-weight: bold;
-            }
+            QDialog { background-color: #E3C4BD; font-family: 'Segoe UI'; font-size: 12pt; }
+            QLabel { font-weight: bold; color: #4B1E0E; }
             QLineEdit {
-                border: 2px solid #E36346;
-                border-radius: 4px;
-                padding: 4px;
-                background-color: #FFF5F3;
-                font-size: 13px;
+                border: 2px solid #E36346; border-radius: 6px;
+                padding: 6px; background-color: #FFF5F3; color: #0E1900;
             }
             QPushButton {
-                background-color: #E36346;
-                color: white;
-                border-radius: 6px;
-                padding: 8px;
-                font-weight: bold;
-                font-size: 14px;
+                background-color: #D98F64; border-radius: 12px;
+                font-size: 14px; font-family: Papyrus; font-weight: bold;
+                padding: 6px; color: #fff;
             }
-            QPushButton:hover {
-                background-color: #FF7255;
-            }
-            QSlider::groove:horizontal {
-                background: #E3C4BD;
-                height: 6px;
-                border-radius: 3px;
-            }
-            QSlider::handle:horizontal {
-                background: #E36346;
-                width: 16px;
-                border-radius: 8px;
-                margin: -5px 0;
-            }
+            QPushButton:hover { background-color: #E0A07C; }
         """)
 
-        bestLayout = QtWidgets.QHBoxLayout()
-        self.mainLayout.addLayout(bestLayout)
-        bestLabel = QtWidgets.QLabel("BEST SCORE")
-        self.bestScoreLine = QtWidgets.QLineEdit("0")
-        self.bestScoreLine.setReadOnly(True)
-        bestLayout.addWidget(bestLabel)
-        bestLayout.addWidget(self.bestScoreLine)
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(100)
+        self.cube_size = 20
+        self.player_x = 200
+        self.player_y = 350
+        self.cubes = []
+        self.best_score = 0
+        self.best_player = "None"
+        self.score = 0
+        self.player_name = "Player1"
 
-        nameLayout = QtWidgets.QHBoxLayout()
-        self.mainLayout.addLayout(nameLayout)
-        nameLabel = QtWidgets.QLabel('PLAYER NAME')
-        self.nameLineEdit = QtWidgets.QLineEdit()
-        nameLayout.addWidget(nameLabel)
-        nameLayout.addWidget(self.nameLineEdit)
+        if os.path.exists(SCORE_FILE):
+            try:
+                with open(SCORE_FILE, "r") as f:
+                    line = f.read().strip()
+                    if "," in line:
+                        name, score = line.split(",", 1)
+                        self.best_player = name
+                        self.best_score = int(score)
+            except:
+                self.best_score = 0
+                self.best_player = "None"
 
-        spawnLayout = QtWidgets.QHBoxLayout()
-        self.mainLayout.addLayout(spawnLayout)
-        spawnLabel = QtWidgets.QLabel('CUBE COUNT')
+        self.mainLayout = QtWidgets.QVBoxLayout(self)
+
+        headerFrame = QtWidgets.QFrame()
+        headerFrame.setStyleSheet("background-color: #E6A891; border-radius: 10px;")
+        headerLayout = QtWidgets.QVBoxLayout(headerFrame)
+        headerLabel = QtWidgets.QLabel("✨ AMAZING FALLINGCUBE ✨")
+        headerLabel.setAlignment(QtCore.Qt.AlignCenter)
+        headerLabel.setStyleSheet("font-size: 18pt; font-weight: bold; color: #4B1E0E;")
+        headerLayout.addWidget(headerLabel)
+        self.mainLayout.addWidget(headerFrame)
+
+        infoLayout = QtWidgets.QGridLayout()
+        self.mainLayout.addLayout(infoLayout)
+        self.bestScoreLabel = QtWidgets.QLabel("Best Score:")
+        self.bestScoreValue = QtWidgets.QLabel(f"{self.best_player} : {self.best_score}")
+        self.playerLabel = QtWidgets.QLabel("Player Name:")
+        self.playerInput = QtWidgets.QLineEdit("Player1")
+        self.currentScoreLabel = QtWidgets.QLabel("Your Score: 0")
+        infoLayout.addWidget(self.bestScoreLabel, 0, 0)
+        infoLayout.addWidget(self.bestScoreValue, 0, 1)
+        infoLayout.addWidget(self.playerLabel, 1, 0)
+        infoLayout.addWidget(self.playerInput, 1, 1)
+        infoLayout.addWidget(self.currentScoreLabel, 2, 0, 1, 2)
+
+        self.spawnLayout = QtWidgets.QFormLayout()
+        self.mainLayout.addLayout(self.spawnLayout)
+
         self.spawnSlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.spawnSlider.setMinimum(1)
-        self.spawnSlider.setMaximum(50)
-        self.spawnSlider.setValue(10)
-        self.spawnValue = QtWidgets.QLabel(str(self.spawnSlider.value()))
-        spawnLayout.addWidget(spawnLabel)
-        spawnLayout.addWidget(self.spawnSlider)
-        spawnLayout.addWidget(self.spawnValue)
-        self.spawnSlider.valueChanged.connect(lambda v: self.spawnValue.setText(str(v)))
+        self.spawnSlider.setRange(1, 20)
+        self.spawnSlider.setValue(5)
+        self.spawnLabel = QtWidgets.QLabel("5")
+        self.spawnSlider.valueChanged.connect(lambda v: self.spawnLabel.setText(str(v)))
+        spawnHBox = QtWidgets.QHBoxLayout()
+        spawnHBox.addWidget(self.spawnSlider)
+        spawnHBox.addWidget(self.spawnLabel)
+        self.spawnLayout.addRow("Cube Amount:", spawnHBox)
 
-        speedLayout = QtWidgets.QHBoxLayout()
-        self.mainLayout.addLayout(speedLayout)
-        speedLabel = QtWidgets.QLabel('CUBE SPEED')
         self.speedSlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.speedSlider.setMinimum(1)
-        self.speedSlider.setMaximum(20)
+        self.speedSlider.setRange(1, 10)
         self.speedSlider.setValue(5)
-        self.speedValue = QtWidgets.QLabel(str(self.speedSlider.value()))
-        speedLayout.addWidget(speedLabel)
-        speedLayout.addWidget(self.speedSlider)
-        speedLayout.addWidget(self.speedValue)
-        self.speedSlider.valueChanged.connect(lambda v: self.speedValue.setText(str(v)))
+        self.speedLabel = QtWidgets.QLabel("5")
+        self.speedSlider.valueChanged.connect(lambda v: self.speedLabel.setText(str(v)))
+        speedHBox = QtWidgets.QHBoxLayout()
+        speedHBox.addWidget(self.speedSlider)
+        speedHBox.addWidget(self.speedLabel)
+        self.spawnLayout.addRow("Cube Speed:", speedHBox)
 
-        buttonLayout = QtWidgets.QHBoxLayout()
-        self.mainLayout.addLayout(buttonLayout)
-        self.startButton = QtWidgets.QPushButton('START GAME')
-        self.stopButton = QtWidgets.QPushButton('STOP GAME')
-        buttonLayout.addWidget(self.startButton)
-        buttonLayout.addWidget(self.stopButton)
+        self.canvas = QtWidgets.QLabel()
+        self.canvas.setFixedSize(440, 400)
+        self.canvas.setStyleSheet("background-color: #333; border: 2px solid #555; border-radius: 8px;")
+        self.mainLayout.addWidget(self.canvas, alignment=QtCore.Qt.AlignCenter)
+        self.canvas_pixmap = QtGui.QPixmap(440, 400)
+        self.canvas_pixmap.fill(QtGui.QColor("#333"))
+
+        btnLayout = QtWidgets.QHBoxLayout()
+        self.startButton = QtWidgets.QPushButton("START GAME")
+        self.stopButton = QtWidgets.QPushButton("STOP GAME")
+        btnLayout.addWidget(self.startButton)
+        btnLayout.addWidget(self.stopButton)
+        self.mainLayout.addLayout(btnLayout)
+
+        controlFrame = QtWidgets.QFrame()
+        controlFrame.setStyleSheet("background-color: #E6A891; border-radius: 10px;")
+        controlLayout = QtWidgets.QVBoxLayout(controlFrame)
+        controlLabel = QtWidgets.QLabel("CONTROL PLAYER")
+        controlLabel.setAlignment(QtCore.Qt.AlignCenter)
+        controlLabel.setStyleSheet("font-weight: bold; color: #4B1E0E;")
+        controlLayout.addWidget(controlLabel)
+        btnLayout2 = QtWidgets.QHBoxLayout()
+        self.leftBtn = QtWidgets.QPushButton()
+        self.rightBtn = QtWidgets.QPushButton()
+        for btn, img_file in zip([self.leftBtn, self.rightBtn], ["left.png", "right.png"]):
+            img_path = os.path.join(IMAGE_DIR, img_file)
+            if os.path.exists(img_path):
+                btn.setIcon(QtGui.QIcon(img_path))
+                btn.setIconSize(QtCore.QSize(64, 64))
+            btn.setFixedSize(72, 72)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #FADCD9; border-radius: 10px;
+                }
+                QPushButton:hover {
+                    background-color: #F8BFB3;
+                }
+            """)
+        btnLayout2.addWidget(self.leftBtn)
+        btnLayout2.addWidget(self.rightBtn)
+        controlLayout.addLayout(btnLayout2)
+        self.mainLayout.addWidget(controlFrame)
 
         self.mainLayout.addStretch()
 
         self.startButton.clicked.connect(self.startGame)
         self.stopButton.clicked.connect(self.stopGame)
+        self.leftBtn.clicked.connect(lambda: self.movePlayer(-20))
+        self.rightBtn.clicked.connect(lambda: self.movePlayer(20))
+        self.timer.timeout.connect(self.safeUpdateGame)
+
+        self.updateCanvas()
 
     def startGame(self):
-        player = self.nameLineEdit.text() or "Player"
-        cubes = self.spawnSlider.value()
-        speed = self.speedSlider.value()
-        QtWidgets.QMessageBox.information(
-            self, "Game Start",
-            f"Welcome, {player}!\n\nCubes: {cubes}\nSpeed: {speed}"
-        )
+        self.score = 0
+        self.currentScoreLabel.setText(f"Your Score: {self.score}")
+        self.cubes = []
+        self.player_name = self.playerInput.text()
+        self.timer.start()
+        self.startButton.setEnabled(False)
+        self.stopButton.setEnabled(True)
+        self.spawnSlider.setEnabled(False)
+        self.speedSlider.setEnabled(False)
 
     def stopGame(self):
-        QtWidgets.QMessageBox.warning(
-            self, "Game Over",
-            "You stopped the game!"
-        )
+        self.timer.stop()
+        self.startButton.setEnabled(True)
+        self.stopButton.setEnabled(False)
+        self.spawnSlider.setEnabled(True)
+        self.speedSlider.setEnabled(True)
+        if self.score > self.best_score:
+            self.best_score = self.score
+            self.best_player = self.player_name
+            self.bestScoreValue.setText(f"{self.best_player} : {self.best_score}")
+            try:
+                with open(SCORE_FILE, "w") as f:
+                    f.write(f"{self.best_player},{self.best_score}")
+            except:
+                pass
+
+    def movePlayer(self, dx):
+        self.player_x = max(0, min(440 - 40, self.player_x + dx))
+        self.updateCanvas()
+
+    def safeUpdateGame(self):
+        try:
+            self.updateGame()
+        except Exception as e:
+            print("Error in updateGame:", e)
+            self.stopGame()
+
+    def updateGame(self):
+        if len(self.cubes) < self.spawnSlider.value():
+            x = random.randint(0, 420)
+            self.cubes.append([x, 0])
+
+        speed = self.speedSlider.value()
+        new_cubes = []
+        for x, y in self.cubes:
+            y += speed
+            if y > 400:
+                self.score += 1
+            else:
+                if (self.player_x < x + 20 and self.player_x + 40 > x and
+                    self.player_y < y + 20 and self.player_y + 20 > y):
+                    self.stopGame()
+                    return
+                new_cubes.append([x, y])
+        self.cubes = new_cubes
+        self.currentScoreLabel.setText(f"Your Score: {self.score}")
+        self.updateCanvas()
+
+    def updateCanvas(self):
+        pixmap = self.canvas_pixmap.copy()
+        painter = QtGui.QPainter(pixmap)
+
+        bg_path = os.path.join(IMAGE_DIR, "bg.jpg")
+        if os.path.exists(bg_path):
+            bg_img = QtGui.QPixmap(bg_path).scaled(440, 400, QtCore.Qt.KeepAspectRatioByExpanding, QtCore.Qt.SmoothTransformation)
+            painter.drawPixmap(0, 0, bg_img)
+        else:
+            painter.fillRect(0, 0, 440, 400, QtGui.QColor("#333"))
+
+        for x, y in self.cubes:
+            gradient = QtGui.QLinearGradient(x, y, x, y + 20)
+            gradient.setColorAt(0, QtGui.QColor("#FFF8DC"))
+            gradient.setColorAt(0.5, QtGui.QColor("#FFD700"))
+            gradient.setColorAt(1, QtGui.QColor("#B8860B"))
+            painter.setBrush(QtGui.QBrush(gradient))
+            painter.drawRect(x, y, 20, 20)
+
+        painter.setBrush(QtGui.QColor("#ff8844"))
+        painter.drawRect(self.player_x, self.player_y, 40, 20)
+
+        painter.setPen(QtGui.QColor("#FFA500"))
+        painter.setFont(QtGui.QFont("Segoe UI", 10, QtGui.QFont.Bold))
+        painter.drawText(self.player_x, self.player_y - 5, self.player_name)
+
+        painter.end()
+        self.canvas.setPixmap(pixmap)
 
 
 def run():
@@ -132,6 +256,7 @@ def run():
         ui.close()
     except:
         pass
-    ptr = wrapInstance(int(omui.MQtUtil.mainWindow()), QtWidgets.QWidget)
+    ptr = getMayaMainWindow()
     ui = FallingCubeDialog(parent=ptr)
     ui.show()
+    return ui
